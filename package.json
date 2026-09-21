@@ -13,7 +13,9 @@
     "build:select_project": "dotenv -e .env.ce -- ibmcloud ce project select --name $IBMCLOUD_TARGET_PROJECT_NAME",
     "build:image_build": "dotenv -e .env.ce -- ibmcloud ce buildrun submit --build $CE_BUILD_NAME --wait",
     "build:update_app": "dotenv -e .env.ce -- ibmcloud ce application update --name $CE_APP_NAME --image $CE_BUILD_IMAGE --wait",
+    "build:env_update": "dotenv -e .env.ce -- ibmcloud ce secret update --name mqtt-secret --from-env-file .env.production",
     "build": "npm run build:target_region && npm run build:target_group && npm run build:select_project && npm run build:image_build && npm run build:update_app",
+    "env:update": "npm run build:target_region && npm run build:target_group && npm run build:select_project && npm run build:env_update",
     "test": "echo \"Error: no test specified\" && exit 1",
     "security": "node .security-check/cli.js",
     "postinstall": "npx simple-git-hooks"
@@ -41,6 +43,8 @@
   },
   "dependencies": {
     "@hono/node-server": "^2.1.1",
-    "hono": "^4.13.8"
+    "dotenv": "^18.0.1",
+    "hono": "^4.13.8",
+    "mqtt": "^5.16.0"
   }
 }

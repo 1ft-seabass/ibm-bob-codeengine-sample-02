@@ -4,9 +4,264 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>IBM Code Engine Sample</title>
+
+  <!-- Bootstrap 5.3.3 -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css">
+
+  <style>
+    html, body {
+      margin: 0;
+      padding: 0;
+      overflow: hidden;
+      width: 100%;
+      height: 100%;
+      background: #1a1a2e;
+    }
+    #babylon-canvas {
+      position: fixed;
+      top: 0; left: 0;
+      width: 100%;
+      height: 100%;
+      touch-action: none;
+    }
+    #app {
+      position: fixed;
+      top: 0; left: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+    }
+    /* UI 要素だけポインタイベントを有効にする */
+    #app .ui-layer {
+      pointer-events: auto;
+    }
+    #hamburger-btn {
+      position: fixed;
+      top: 16px;
+      left: 16px;
+      z-index: 1100;
+      pointer-events: auto;
+    }
+    /* トースト */
+    #toast-area {
+      position: fixed;
+      bottom: 24px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 2000;
+      pointer-events: none;
+    }
+  </style>
 </head>
 <body>
-  <h1>Hello from IBM Code Engine!</h1>
-  <p>Hono + Node.js で動いています。</p>
+
+<!-- Babylon.js キャンバス -->
+<canvas id="babylon-canvas"></canvas>
+
+<!-- Vue3 マウント対象 -->
+<div id="app">
+
+  <!-- ハンバーガーボタン -->
+  <button id="hamburger-btn"
+          class="btn btn-outline-light"
+          type="button"
+          data-bs-toggle="offcanvas"
+          data-bs-target="#drawer">
+    <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" fill="currentColor" viewBox="0 0 16 16">
+      <path fill-rule="evenodd" d="M2.5 12a.5.5 0 0 1 .5-.5h10a.5.5 0 0 1 0 1H3a.5.5 0 0 1-.5-.5zm0-4a.5.5 0 0 1 .5-.5h10a.5.5 0 0 1 0 1H3a.5.5 0 0 1-.5-.5zm0-4a.5.5 0 0 1 .5-.5h10a.5.5 0 0 1 0 1H3a.5.5 0 0 1-.5-.5z"/>
+    </svg>
+  </button>
+
+  <!-- 左ドロワー（Bootstrap Offcanvas） -->
+  <div class="offcanvas offcanvas-start ui-layer"
+       tabindex="-1"
+       id="drawer"
+       style="max-width: 280px;">
+    <div class="offcanvas-header">
+      <h5 class="offcanvas-title">コントロール</h5>
+      <button type="button" class="btn-close" data-bs-dismiss="offcanvas"></button>
+    </div>
+    <div class="offcanvas-body d-flex flex-column gap-3">
+
+      <!-- 回転トグル -->
+      <div>
+        <p class="mb-1 text-muted small">立方体の回転</p>
+        <button class="btn w-100"
+                :class="rotating ? 'btn-warning' : 'btn-outline-warning'"
+                @click="toggleRotation">
+          {{ rotating ? '⏸ 回転を停止' : '▶ 回転を再開' }}
+        </button>
+      </div>
+
+      <!-- アングルリセット -->
+      <div>
+        <p class="mb-1 text-muted small">カメラ</p>
+        <button class="btn btn-outline-info w-100" @click="resetCamera">
+          🔄 アングルリセット
+        </button>
+      </div>
+
+      <!-- LED 状態表示 -->
+      <div class="mt-2">
+        <p class="mb-1 text-muted small">LED 状態</p>
+        <span class="badge fs-6 w-100 py-2"
+              :class="ledOn ? 'bg-danger' : 'bg-secondary'">
+          {{ ledOn ? '🔴 ON' : '⚫ OFF' }}
+        </span>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- トースト（エラー通知） -->
+  <div id="toast-area">
+    <div v-if="errorMsg"
+         class="toast show align-items-center text-bg-danger border-0"
+         role="alert"
+         style="pointer-events:auto; min-width:260px;">
+      <div class="d-flex">
+        <div class="toast-body">⚠ {{ errorMsg }}</div>
+        <button type="button" class="btn-close btn-close-white me-2 m-auto"
+                @click="errorMsg = ''"></button>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- Babylon.js 6.49.0 -->
+<script src="https://cdn.babylonjs.com/babylon.js"></script>
+<!-- Vue 3.4.21 グローバルビルド -->
+<script src="https://cdn.jsdelivr.net/npm/vue@3.4.21/dist/vue.global.prod.js"></script>
+<!-- Bootstrap 5.3.3 JS -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+
+<script>
+// ─── Babylon.js シーン ────────────────────────────────────────────────────────
+
+const canvas = document.getElementById('babylon-canvas');
+const engine = new BABYLON.Engine(canvas, true, { preserveDrawingBuffer: true });
+
+// 初期カメラパラメータ（リセット用に保持）
+const CAM_INIT = { alpha: Math.PI / 4, beta: Math.PI / 3, radius: 4 };
+
+let scene, box, camera;
+
+function createScene() {
+  scene = new BABYLON.Scene(engine);
+  scene.clearColor = new BABYLON.Color4(0.1, 0.1, 0.18, 1);
+
+  // カメラ
+  camera = new BABYLON.ArcRotateCamera('cam', CAM_INIT.alpha, CAM_INIT.beta, CAM_INIT.radius, BABYLON.Vector3.Zero(), scene);
+  camera.attachControl(canvas, true);
+  camera.lowerRadiusLimit = 1.5;
+  camera.upperRadiusLimit = 12;
+
+  // ライト
+  const light = new BABYLON.HemisphericLight('light', new BABYLON.Vector3(0, 1, 0), scene);
+  light.intensity = 0.9;
+
+  // 立方体
+  box = BABYLON.MeshBuilder.CreateBox('box', { size: 1 }, scene);
+  const mat = new BABYLON.StandardMaterial('mat', scene);
+  mat.diffuseColor = new BABYLON.Color3(0.5, 0.5, 0.5); // 初期: 灰色
+  box.material = mat;
+
+  // クリック判定
+  box.actionManager = new BABYLON.ActionManager(scene);
+  box.actionManager.registerAction(
+    new BABYLON.ExecuteCodeAction(
+      BABYLON.ActionManager.OnPickTrigger,
+      () => { window.__vueApp && window.__vueApp.onBoxClick(); }
+    )
+  );
+
+  return scene;
+}
+
+createScene();
+
+// レンダーループ（自転は Vue 側のフラグで制御）
+let rotY = 0;
+engine.runRenderLoop(() => {
+  if (window.__vueRotating && box) {
+    box.rotation.y += 0.01;
+  }
+  scene.render();
+});
+
+window.addEventListener('resize', () => engine.resize());
+
+// ─── Vue3 アプリ ──────────────────────────────────────────────────────────────
+
+const { createApp, ref } = Vue;
+
+const app = createApp({
+  setup() {
+    const rotating = ref(true);
+    const ledOn    = ref(false);
+    const errorMsg = ref('');
+    let requesting = false;
+
+    // Babylon ループ側から参照できるようグローバルフラグで連携
+    window.__vueRotating = true;
+
+    function toggleRotation() {
+      rotating.value = !rotating.value;
+      window.__vueRotating = rotating.value;
+    }
+
+    function resetCamera() {
+      if (!camera) return;
+      camera.alpha  = CAM_INIT.alpha;
+      camera.beta   = CAM_INIT.beta;
+      camera.radius = CAM_INIT.radius;
+      camera.target = BABYLON.Vector3.Zero();
+    }
+
+    function setBoxColor(on) {
+      if (!box) return;
+      box.material.diffuseColor = on
+        ? new BABYLON.Color3(0.85, 0.15, 0.15)  // 赤
+        : new BABYLON.Color3(0.5, 0.5, 0.5);    // 灰
+    }
+
+    async function onBoxClick() {
+      if (requesting) return; // 二重リクエスト防止
+      requesting = true;
+      errorMsg.value = '';
+
+      const target = !ledOn.value;
+      const url = target ? '/api/led/on' : '/api/led/off';
+
+      try {
+        const res = await fetch(url, { method: 'POST' });
+        if (!res.ok) {
+          const body = await res.json().catch(() => ({}));
+          throw new Error(body.error || `HTTP ${res.status}`);
+        }
+        // 成功してから色・状態を更新
+        ledOn.value = target;
+        setBoxColor(target);
+      } catch (err) {
+        console.error('[led]', err.message);
+        errorMsg.value = `エラー: ${err.message}`;
+        // エラー時は色・状態をクリック前のまま維持（何もしない）
+        // 5秒後にトースト自動消去
+        setTimeout(() => { errorMsg.value = ''; }, 5000);
+      } finally {
+        requesting = false;
+      }
+    }
+
+    // グローバルに公開（Babylon の ActionManager から呼ぶ）
+    window.__vueApp = { onBoxClick };
+
+    return { rotating, ledOn, errorMsg, toggleRotation, resetCamera, onBoxClick };
+  }
+});
+
+app.mount('#app');
+</script>
 </body>
 </html>
