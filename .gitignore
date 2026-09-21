@@ -148,3 +148,6 @@ vite.config.ts.timestamp-*
 
 # 作業用一時フォルダ
 tmp/
+
+# IBM Code Engine デプロイ設定（機密情報を含むため Git 管理外）
+.env.ce

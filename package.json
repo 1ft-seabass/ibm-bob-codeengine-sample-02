@@ -2,11 +2,15 @@
   "name": "ibm-bob-codeengine-sample-02",
   "version": "1.0.0",
   "description": "",
-  "main": "index.js",
+  "main": "server.js",
   "directories": {
     "doc": "docs"
   },
   "scripts": {
+    "start": "node server.js",
+    "build:image_build": "dotenv -e .env.ce -- ibmcloud ce buildrun submit --build $CE_BUILD_NAME --wait",
+    "build:update_app": "dotenv -e .env.ce -- ibmcloud ce application update --name $CE_APP_NAME --image $CE_BUILD_IMAGE --wait",
+    "build": "npm run build:image_build && npm run build:update_app",
     "test": "echo \"Error: no test specified\" && exit 1",
     "security": "node .security-check/cli.js",
     "postinstall": "npx simple-git-hooks"
@@ -28,7 +32,12 @@
   "homepage": "https://github.com/1ft-seabass/ibm-bob-codeengine-sample-02#readme",
   "devDependencies": {
     "@secretlint/secretlint-rule-preset-recommend": "^13.0.5",
+    "dotenv-cli": "^11.0.0",
     "secretlint": "^13.0.5",
     "simple-git-hooks": "^2.14.0"
+  },
+  "dependencies": {
+    "@hono/node-server": "^2.1.1",
+    "hono": "^4.13.8"
   }
 }
