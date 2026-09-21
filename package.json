@@ -1,0 +1,34 @@
+{
+  "name": "ibm-bob-codeengine-sample-02",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "directories": {
+    "doc": "docs"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "security": "node .security-check/cli.js",
+    "postinstall": "npx simple-git-hooks"
+  },
+  "simple-git-hooks": {
+    "pre-commit": "node .security-check/cli.js pre-commit"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/1ft-seabass/ibm-bob-codeengine-sample-02.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/1ft-seabass/ibm-bob-codeengine-sample-02/issues"
+  },
+  "homepage": "https://github.com/1ft-seabass/ibm-bob-codeengine-sample-02#readme",
+  "devDependencies": {
+    "@secretlint/secretlint-rule-preset-recommend": "^13.0.5",
+    "secretlint": "^13.0.5",
+    "simple-git-hooks": "^2.14.0"
+  }
+}
