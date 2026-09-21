@@ -145,3 +145,6 @@ vite.config.ts.timestamp-*
 # setup-securecheck: gitleaksバイナリ・実行ログ（ローカル専用、リポジトリに含めない）
 .security-check/bin/
 .security-check/logs/
+
+# 作業用一時フォルダ
+tmp/
